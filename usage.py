@@ -7,6 +7,7 @@ from typing import Optional
 import os
 
 IGNORE_USER_CPU_THRESH = 0.0
+HISTORY_MAXLEN = 150
 
 COL_RESET  = '\u001b[0m'
 COL_RED    = '\u001b[31m'
@@ -14,7 +15,7 @@ COL_YELLOW = '\u001b[33m'
 COL_GREEN  = '\u001b[32m'
 COL_BLUE   = '\u001b[34m'
 
-def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int):
+def main(only_show_user:Optional[str], iter_sleep:float):
 
     if only_show_user != None:
         cpu_history = []
@@ -65,30 +66,30 @@ def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int):
 
         for user, cpu, _mem in user_usages:
             if user == only_show_user:
-                cpu_history.append(cpu)
-                while len(cpu_history) > graph_size_y:
-                    del cpu_history[0]
+                cpu_history.insert(0, cpu)
+                while len(cpu_history) > HISTORY_MAXLEN:
+                    del cpu_history[-1]
 
         # draw separator
 
         print()
         print()
 
+        terminal_size = os.get_terminal_size()
+
         # draw history
 
         if only_show_user:
 
-            highest = max(cpu_history)
+            free_space_y = terminal_size.lines - 2
+            history = cpu_history[:free_space_y]
+
+            highest = max(history)
             if highest == 0:
                 highest = 1
 
-            # fuckyness = 0
-            # value_prev = 0
-            # for value in cpu_history:
-            #     fuckyness += abs(value - value_prev)
-
             value_prev = 0
-            for value in cpu_history:
+            for value in reversed(history):
 
                 # if value >= highest * 2/3:
                 #     col = COL_RED
@@ -105,7 +106,7 @@ def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int):
                 col += f'30'
                 col += 'm'
 
-                free_space_x = os.get_terminal_size().columns - 6 - 3 - 2
+                free_space_x = terminal_size.columns - 6 - 3 - 2
                 length = (value / highest) * free_space_x
                 length = int(length)
                 print(f'{value:6.2f}[%]', end='')
@@ -163,7 +164,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('shows usage based on user')
     parser.add_argument('--iter-sleep', type=float, default=5.0)
     parser.add_argument('--user',       type=str,   default=None)
-    parser.add_argument('--graph-y',    type=int,   default=42)
     args = parser.parse_args()
 
-    main(args.user, args.iter_sleep, args.graph_y)
+    main(args.user, args.iter_sleep)
