@@ -6,9 +6,6 @@ import argparse
 from typing import Optional
 
 IGNORE_USER_CPU_THRESH = 0.0
-ITER_SLEEP = 4
-HISTORY_GRAPH_SIZE_Y = 40
-HISTORY_GRAPH_SIZE_X = 190
 
 COL_RESET  = '\u001b[0m'
 COL_RED    = '\u001b[31m'
@@ -16,7 +13,7 @@ COL_YELLOW = '\u001b[33m'
 COL_GREEN  = '\u001b[32m'
 COL_BLUE   = '\u001b[34m'
 
-def main(only_show_user:Optional[str]):
+def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int, graph_size_x:int):
 
     if only_show_user != None:
         cpu_history = []
@@ -68,7 +65,7 @@ def main(only_show_user:Optional[str]):
         for user, cpu, _mem in user_usages:
             if user == only_show_user:
                 cpu_history.append(cpu)
-                while len(cpu_history) > HISTORY_GRAPH_SIZE_Y:
+                while len(cpu_history) > graph_size_y:
                     del cpu_history[0]
 
         # draw separator
@@ -107,7 +104,7 @@ def main(only_show_user:Optional[str]):
                 col += f'30'
                 col += 'm'
 
-                length = (value / highest) * HISTORY_GRAPH_SIZE_X
+                length = (value / highest) * graph_size_x
                 length = int(length)
                 print(f'{value:6.2f}[%]', end='')
 
@@ -158,11 +155,14 @@ def main(only_show_user:Optional[str]):
 
         # sleep
 
-        time.sleep(ITER_SLEEP)
+        time.sleep(iter_sleep)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('shows usage based on user')
-    parser.add_argument('--user', type=str, default=None)
+    parser.add_argument('--iter-sleep', type=float, default=5.0)
+    parser.add_argument('--user',       type=str,   default=None)
+    parser.add_argument('--graph-y',    type=int,   default=42)
+    parser.add_argument('--graph-x',    type=int,   default=192)
     args = parser.parse_args()
 
-    main(args.user)
+    main(args.user, args.iter_sleep, args.graph_y, args.graph_x)
