@@ -7,7 +7,7 @@ from typing import Optional
 import os
 
 IGNORE_USER_CPU_THRESH = 0.0
-HISTORY_MAXLEN = 150
+HISTORY_MAXLEN = 100
 
 COL_RESET  = '\u001b[0m'
 COL_RED    = '\u001b[31m'
