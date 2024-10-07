@@ -4,6 +4,7 @@ import psutil
 import time
 import argparse
 from typing import Optional
+import os
 
 IGNORE_USER_CPU_THRESH = 0.0
 
@@ -13,7 +14,7 @@ COL_YELLOW = '\u001b[33m'
 COL_GREEN  = '\u001b[32m'
 COL_BLUE   = '\u001b[34m'
 
-def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int, graph_size_x:int):
+def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int):
 
     if only_show_user != None:
         cpu_history = []
@@ -104,7 +105,8 @@ def main(only_show_user:Optional[str], iter_sleep:float, graph_size_y:int, graph
                 col += f'30'
                 col += 'm'
 
-                length = (value / highest) * graph_size_x
+                free_space_x = os.get_terminal_size().columns - 6 - 3 - 2
+                length = (value / highest) * free_space_x
                 length = int(length)
                 print(f'{value:6.2f}[%]', end='')
 
@@ -162,7 +164,6 @@ if __name__ == '__main__':
     parser.add_argument('--iter-sleep', type=float, default=5.0)
     parser.add_argument('--user',       type=str,   default=None)
     parser.add_argument('--graph-y',    type=int,   default=42)
-    parser.add_argument('--graph-x',    type=int,   default=192)
     args = parser.parse_args()
 
-    main(args.user, args.iter_sleep, args.graph_y, args.graph_x)
+    main(args.user, args.iter_sleep, args.graph_y)
