@@ -100,7 +100,8 @@ def draw(only_show_user, infinite_graph, cpu_history, user_usages):
     output += '\n'
 
     # draw history
-    output += draw_history(only_show_user, infinite_graph, cpu_history)
+    if only_show_user:
+        output += draw_history(infinite_graph, cpu_history)
 
     # print usage
     output += print_usage(only_show_user, user_usages)
@@ -108,10 +109,7 @@ def draw(only_show_user, infinite_graph, cpu_history, user_usages):
     # show buffered output
     print(output, end='')
 
-def draw_history(only_show_user, infinite_graph, cpu_history):
-    if not only_show_user:
-        return ''
-
+def draw_history(infinite_graph, cpu_history):
     fnc = draw_history_infinite_graph if infinite_graph else draw_history_finite_graph
     return fnc(cpu_history)
 
