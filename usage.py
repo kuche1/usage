@@ -3,9 +3,9 @@
 import psutil
 import time
 import argparse
-from typing import Optional
+from typing import Optional, cast
 import os
-import drawille
+import drawille # pip3 install drawille
 
 IGNORE_USER_CPU_THRESH = 0.0
 HISTORY_MAXLEN = 200
@@ -20,7 +20,7 @@ COL_YELLOW = '\u001b[33m'
 COL_GREEN  = '\u001b[32m'
 COL_BLUE   = '\u001b[34m'
 
-def main(only_show_user:Optional[str], iter_sleep:float):
+def main(only_show_user:Optional[str], iter_sleep:float, infinite_graph:bool):
 
     cpu_history = []
 
@@ -42,7 +42,7 @@ def main(only_show_user:Optional[str], iter_sleep:float):
         output += '\n'
 
         # draw history
-        output += draw_history(only_show_user, cpu_history)
+        output += draw_history(only_show_user, infinite_graph, cpu_history)
 
         # print usage
         output += print_usage(only_show_user, user_usages)
@@ -104,83 +104,94 @@ def save_history(only_show_user, cpu_history, user_usages):
                     del cpu_history[-1]
                 break
 
-def draw_history(only_show_user, cpu_history):
+def draw_history(only_show_user, infinite_graph, cpu_history):
+    if not only_show_user:
+        return ''
+
+    fnc = draw_history_infinite_graph if infinite_graph else draw_history_finite_graph
+    return fnc(cpu_history)
+
+def draw_history_finite_graph(cpu_history):
+
     output = ''
 
-    if only_show_user:
+    terminal_size = os.get_terminal_size()
 
-        terminal_size = os.get_terminal_size()
+    free_space_y = terminal_size.lines - 1
+    free_space_y *= BRILE_HEIGHT_MUL
+    history = cpu_history[:free_space_y]
 
-        free_space_y = terminal_size.lines - 1
-        free_space_y *= BRILE_HEIGHT_MUL
-        history = cpu_history[:free_space_y]
+    highest_value = max(history)
+    if highest_value == 0:
+        highest_value = 0.1
 
-        highest_value = max(history)
-        if highest_value == 0:
-            highest_value = 0.1
+    # ...
 
-        # ...
+    cur_line_values = []
+    all_line_values = []
 
-        cur_line_values = []
-        all_line_values = []
+    for idx, graph_elem_value in enumerate(history):
 
-        for idx, graph_elem_value in enumerate(history):
+        cur_line_values.insert(0, graph_elem_value)
 
-            cur_line_values.insert(0, graph_elem_value)
-
-            if idx % BRILE_HEIGHT_MUL == BRILE_HEIGHT_MUL - 1:
-                all_line_values.insert(0, cur_line_values)
-                cur_line_values = []
-
-        if len(cur_line_values):
-            while len(cur_line_values) < BRILE_HEIGHT_MUL:
-                cur_line_values.insert(0, 0)
+        if idx % BRILE_HEIGHT_MUL == BRILE_HEIGHT_MUL - 1:
             all_line_values.insert(0, cur_line_values)
+            cur_line_values = []
 
-        # ...
+    if len(cur_line_values):
+        while len(cur_line_values) < BRILE_HEIGHT_MUL:
+            cur_line_values.insert(0, 0)
+        all_line_values.insert(0, cur_line_values)
 
-        highest_avg_value = 0.1
+    # ...
 
-        for line_values in all_line_values:
-            avg = sum(line_values) / len(line_values)
-            if avg > highest_avg_value:
-                highest_avg_value = avg
+    highest_avg_value = 0.1
 
-        # ...
+    for line_values in all_line_values:
+        avg = sum(line_values) / len(line_values)
+        if avg > highest_avg_value:
+            highest_avg_value = avg
 
-        for line_values in all_line_values:
+    # ...
 
-            avg_value = sum(line_values) / len(line_values)
-            output += f'{avg_value:6.2f}[%]'
+    for line_values in all_line_values:
 
-            canvas = drawille.Canvas()
+        avg_value = sum(line_values) / len(line_values)
+        output += f'{avg_value:6.2f}[%]'
 
-            for y, value in enumerate(line_values):
+        canvas = drawille.Canvas()
 
-                free_space_x = terminal_size.columns - 6 - 3
-                free_space_x *= BRILE_WIDTH_MUL
-                free_space_x *= (value / highest_value)
-                free_space_x = int(free_space_x)
+        for y, value in enumerate(line_values):
 
-                for x in range(free_space_x):
-                    canvas.set(x, y)
+            free_space_x = terminal_size.columns - 6 - 3
+            free_space_x *= BRILE_WIDTH_MUL
+            free_space_x *= (value / highest_value)
+            free_space_x = int(free_space_x)
 
-            if DETERMINE_COLOR_BASED_ON_HIGHEST_AVG:
-                redness = avg_value / highest_avg_value
-            else:
-                redness = avg_value / highest_value
-            col = '\u001b[38;2;'
-            col += str(int(220 * redness)) + ';'
-            col += str(int(220 * (1.0 - redness))) + ';'
-            col += f'30'
-            col += 'm'
+            for x in range(free_space_x):
+                canvas.set(x, y)
 
-            output += col
-            output += canvas.frame()
-            output += COL_RESET
+        if DETERMINE_COLOR_BASED_ON_HIGHEST_AVG:
+            redness = avg_value / highest_avg_value
+        else:
+            redness = avg_value / highest_value
+        col = '\u001b[38;2;'
+        col += str(int(220 * redness)) + ';'
+        col += str(int(220 * (1.0 - redness))) + ';'
+        col += f'30'
+        col += 'm'
 
-            output += '\n'
+        output += col
+        output += cast(str, canvas.frame())
+        output += COL_RESET
 
+        output += '\n'
+
+    return output
+
+def draw_history_infinite_graph(cpu_history):
+    assert False, 'TODO not implemented'
+    output = ''
     return output
 
 def print_usage(only_show_user, user_usages):
@@ -227,8 +238,9 @@ def print_usage(only_show_user, user_usages):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('shows usage based on user')
-    parser.add_argument('--iter-sleep', type=float, default=5.0)
-    parser.add_argument('--user',       type=str,   default=None)
+    parser.add_argument('--iter-sleep',     type=float, default=5.0)
+    parser.add_argument('--user',           type=str,   default=None)
+    parser.add_argument('--infinite-graph', type=bool,  default=False)
     args = parser.parse_args()
 
-    main(args.user, args.iter_sleep)
+    main(args.user, args.iter_sleep, args.infinite_graph)
