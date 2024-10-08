@@ -35,20 +35,8 @@ def main(only_show_user:Optional[str], iter_sleep:float, infinite_graph:bool):
         # save history
         save_history(only_show_user, cpu_history, user_usages)
 
-        # prepare buffered output
-        output = ''
-
-        # draw separator
-        output += '\n'
-
-        # draw history
-        output += draw_history(only_show_user, infinite_graph, cpu_history)
-
-        # print usage
-        output += print_usage(only_show_user, user_usages)
-
-        # show buffered output
-        print(output, end='')
+        # output
+        draw(only_show_user, infinite_graph, cpu_history, user_usages)
 
         # sleep
         time.sleep(iter_sleep)
@@ -103,6 +91,22 @@ def save_history(only_show_user, cpu_history, user_usages):
                 while len(cpu_history) > HISTORY_MAXLEN:
                     del cpu_history[-1]
                 break
+
+def draw(only_show_user, infinite_graph, cpu_history, user_usages):
+    # prepare buffered output
+    output = ''
+
+    # draw separator
+    output += '\n'
+
+    # draw history
+    output += draw_history(only_show_user, infinite_graph, cpu_history)
+
+    # print usage
+    output += print_usage(only_show_user, user_usages)
+
+    # show buffered output
+    print(output, end='')
 
 def draw_history(only_show_user, infinite_graph, cpu_history):
     if not only_show_user:
