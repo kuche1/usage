@@ -6,6 +6,7 @@ import argparse
 from typing import Optional, cast
 import os
 import drawille # pip3 install drawille
+import datetime
 
 IGNORE_USER_CPU_THRESH = 0.0
 HISTORY_MAXLEN = 200
@@ -99,29 +100,39 @@ def draw(only_show_user, infinite_graph, cpu_history, user_usages):
     output = ''
 
     # draw separator
-    output += '\n'
+    if not infinite_graph:
+        output += '\n'
 
     # draw history
     if only_show_user:
         output += draw_history(infinite_graph, cpu_history)
 
     # print usage
-    output += print_usage(only_show_user, user_usages)
+    if not infinite_graph:
+        output += print_usage(only_show_user, user_usages)
 
     # show buffered output
     print(output, end='')
 
 def draw_history(infinite_graph, cpu_history):
-    fnc = draw_history_infinite_graph if infinite_graph else draw_history_finite_graph
-    return fnc(cpu_history)
 
-def draw_history_finite_graph(cpu_history):
+    term_size = os.get_terminal_size()
+
+    free_space_x = term_size.columns
+
+    free_space_y = term_size.lines
+    if not infinite_graph:
+        free_space_y -= 1
+
+    fnc = draw_history_infinite_graph if infinite_graph else draw_history_finite_graph
+    return fnc(cpu_history, free_space_x, free_space_y)
+
+def draw_history_finite_graph(cpu_history, free_space_x, free_space_y):
 
     output = ''
 
-    terminal_size = os.get_terminal_size()
+    free_space_x += - 6 - 3
 
-    free_space_y = terminal_size.lines - 1
     free_space_y *= BRILE_HEIGHT_MUL
     history = cpu_history[:free_space_y]
 
@@ -167,12 +178,11 @@ def draw_history_finite_graph(cpu_history):
 
         for y, value in enumerate(line_values):
 
-            free_space_x = terminal_size.columns - 6 - 3
-            free_space_x *= BRILE_WIDTH_MUL
-            free_space_x *= (value / highest_value)
-            free_space_x = int(free_space_x)
+            width = free_space_x * BRILE_WIDTH_MUL
+            width *= (value / highest_value)
+            width = int(width)
 
-            for x in range(free_space_x):
+            for x in range(width):
                 canvas.set(x, y)
 
         if DETERMINE_COLOR_BASED_ON_HIGHEST_AVG:
@@ -193,9 +203,65 @@ def draw_history_finite_graph(cpu_history):
 
     return output
 
-def draw_history_infinite_graph(cpu_history):
-    assert False, 'TODO not implemented'
+dhig_highest_avg_value = 0.1
+dhig_highest_value = 0.1
+def draw_history_infinite_graph(cpu_history, free_space_x, free_space_y):
+    global dhig_highest_avg_value
+    global dhig_highest_value
+
     output = ''
+
+    free_space_x -= 9 # 20:27:01(space)
+    free_space_x -= 6 # 123.45
+    free_space_x -= 3 # [%]
+
+    while len(cpu_history) >= BRILE_HEIGHT_MUL:
+
+        avg_value = 0
+        for idx in range(BRILE_HEIGHT_MUL):
+            value = cpu_history[idx]
+            if value > dhig_highest_value:
+                print(f'graph scaled; now {value/dhig_highest_value} times bigger')
+                dhig_highest_value = value
+            avg_value += value
+        avg_value /= BRILE_HEIGHT_MUL
+
+        output += datetime.datetime.now().strftime('%H:%M:%S')
+        output += ' '
+
+        output += f'{avg_value:6.2f}[%]'
+
+        if avg_value > dhig_highest_avg_value:
+            dhig_highest_avg_value = avg_value
+
+        canvas = drawille.Canvas()
+
+        for y in range(BRILE_HEIGHT_MUL):
+
+            value = cpu_history.pop(-1)
+
+            width = free_space_x * BRILE_WIDTH_MUL
+            width *= (value / dhig_highest_value)
+            width = int(width)
+
+            for x in range(width):
+                canvas.set(x, y)
+
+        if DETERMINE_COLOR_BASED_ON_HIGHEST_AVG:
+            redness = avg_value / dhig_highest_avg_value
+        else:
+            redness = avg_value / dhig_highest_value
+        col = '\u001b[38;2;'
+        col += str(int(220 * redness)) + ';'
+        col += str(int(220 * (1.0 - redness))) + ';'
+        col += f'30'
+        col += 'm'
+
+        output += col
+        output += cast(str, canvas.frame())
+        output += COL_RESET
+        output += '\n'
+
     return output
 
 def print_usage(only_show_user, user_usages):
@@ -244,7 +310,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('shows usage based on user')
     parser.add_argument('--iter-sleep',     type=float, default=5.0)
     parser.add_argument('--user',           type=str,   default=None)
-    parser.add_argument('--infinite-graph', type=bool,  default=False)
+    parser.add_argument('--infinite-graph',             action='store_true')
     args = parser.parse_args()
 
     main(args.user, args.iter_sleep, args.infinite_graph)
