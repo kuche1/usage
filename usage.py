@@ -299,8 +299,6 @@ def print_usage(only_show_user, user_usages):
     if only_show_user:
         if user_usages_output.endswith('\n'):
             user_usages_output = user_usages_output[:-1]
-    else:
-        user_usages_output += '\n'
 
     output += user_usages_output
 
