@@ -93,6 +93,8 @@ def save_history(only_show_user, cpu_history, user_usages):
                 break
 
 def draw(only_show_user, infinite_graph, cpu_history, user_usages):
+    # TODO use the second buffer terminal thing and swap between them
+
     # prepare buffered output
     output = ''
 
