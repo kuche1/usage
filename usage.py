@@ -221,7 +221,7 @@ def draw_history_infinite_graph(cpu_history, free_space_x, free_space_y):
         for idx in range(BRILE_HEIGHT_MUL):
             value = cpu_history[idx]
             if value > dhig_highest_value:
-                print(f'graph scaled; old max {dhig_highest_value}; new max {value}; scaled by{value/dhig_highest_value}')
+                print(f'graph scaled; old max {dhig_highest_value}; new max {value}; scaled by {value/dhig_highest_value}')
                 dhig_highest_value = value
             avg_value += value
         avg_value /= BRILE_HEIGHT_MUL
