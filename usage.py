@@ -27,11 +27,8 @@ def main(only_show_user:Optional[str], iter_sleep:float, infinite_graph:bool):
 
     while True:
 
-        # quickly remember all processes
-        user_procs = get_processes(only_show_user)
-
         # calc user usage
-        user_usages = calc_user_usages(user_procs)
+        user_usages = calc_user_usages(only_show_user)
 
         # save history
         save_history(only_show_user, cpu_history, user_usages)
@@ -42,7 +39,10 @@ def main(only_show_user:Optional[str], iter_sleep:float, infinite_graph:bool):
         # sleep
         time.sleep(iter_sleep)
 
-def get_processes(only_show_user):
+def calc_user_usages(only_for_user:Optional[str]) -> list[tuple[str, float, int]]:
+
+    # quickly remember all processes
+
     user_procs = {}
 
     for proc in psutil.process_iter():
@@ -55,8 +55,8 @@ def get_processes(only_show_user):
         except psutil.NoSuchProcess:
             continue
 
-        if only_show_user != None:
-            if user != only_show_user:
+        if only_for_user != None:
+            if user != only_for_user:
                 continue
 
         mem_non_swap_bytes = mem.rss
@@ -67,10 +67,9 @@ def get_processes(only_show_user):
 
         user_procs[user].append((name, cpu_usage, mem_non_swap_bytes))
 
-    return user_procs
+    # ...
 
-def calc_user_usages(user_procs):
-    user_usages = []
+    user_usages: list[tuple[str, float, int]] = []
 
     for user, procs in user_procs.items():
 
@@ -94,7 +93,7 @@ def save_history(only_show_user, cpu_history, user_usages):
                 break
 
 def draw(only_show_user, infinite_graph, cpu_history, user_usages):
-    # TODO use the second buffer terminal thing and swap between them
+    # we could use the second buffer terminal thing and swap between them
 
     # prepare buffered output
     output = ''
